@@ -15,5 +15,5 @@ Follow these steps to set up the project:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd nlp
+   git clone https://github.com/expenile/NLP_Capstone.git
+   cd NLP_Capstone
