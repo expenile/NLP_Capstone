@@ -6,8 +6,7 @@ from transformers import pipeline
 import json
 import spacy
 import spacy_streamlit
-
-
+from sentence_transformers import SentenceTransformer, util
 
 
 def draw_all(
@@ -29,22 +28,22 @@ def draw_all(
         3. Sentiment Analysis
         4. Question Answering
         5. Text Completion
-       
+        6. Language Translation
+        7. Text Similarity
+        
         ```
         """
     )
-
-    
 
 with st.sidebar:
     draw_all("sidebar")
 
 
-
 def main():
     st.title("NLP Web App")
     menu = ["--Select--","Summarizer","Named Entity Recognition",
-            "Sentiment Analysis","Question Answering","Text Completion"]
+            "Sentiment Analysis","Question Answering","Text Completion",
+            "Language Translation", "Text Similarity"]
     choice = st.sidebar.selectbox("Choose What u wanna do !!", menu)
 
 
@@ -68,8 +67,8 @@ def main():
                  the context of text just like humans.
         """)
         
-        
         st.image('rob.webp')
+
     elif choice == "Summarizer":
         st.subheader("Text Summarization")
         st.write("Enter the Text you want to summarize!")
@@ -77,9 +76,9 @@ def main():
         num_words = st.number_input("Enter Number of Words in Summary", min_value=10, max_value=100, value=50)
     
         if raw_text.strip() and num_words:
-            summarizer = pipeline('summarization', model='t5-small')  # Use a smaller model for faster performance
-            input_length = len(raw_text.split())  # Calculate the input text length
-            max_length = min(num_words, input_length - 1)  # Ensure max_length is not greater than input length
+            summarizer = pipeline('summarization', model='facebook/bart-base')  # Use a better model
+            input_length = len(raw_text.split())
+            max_length = min(num_words, input_length - 1)  # Ensure max_length is less than input length
             min_length = max(20, max_length // 2)  # Set a reasonable min_length
     
             try:
@@ -119,16 +118,13 @@ def main():
                 st.write("""# This text has a Negative Sentiment. 😤""")
             elif sentiment =="NEUTRAL":
                 st.write("""# This text seems Neutral ... 😐""")
-    
 
     elif choice=="Question Answering":
         st.subheader("Question Answering")
         st.write(" Enter the Context and ask the Question to find out the Answer !")
         question_answering = pipeline("question-answering")
-        
 
         context = st.text_area("Context","Enter the Context Here")
-        
         question = st.text_area("Your Question","Enter your Question Here")
         
         if context !="Enter Text Here" and question!="Enter your Question Here":
@@ -139,13 +135,11 @@ def main():
             generated_text = '. '.join(list(map(lambda x: x.strip().capitalize(), generated_text.split('.'))))
             st.write(f" Here's your Answer :\n {generated_text}")
 
-    
     elif choice=="Text Completion":
         st.subheader("Text Completion")
         st.write(" Enter the uncomplete Text to complete it automatically using AI !")
         text_generation = pipeline("text-generation")
         message = st.text_area("Your Text","Enter the Text to complete")
-        
         
         if message !="Enter the Text to complete":
             generator = text_generation(message)
@@ -154,6 +148,32 @@ def main():
             generated_text = d2['generated_text']
             generated_text = '. '.join(list(map(lambda x: x.strip().capitalize(), generated_text.split('.'))))
             st.write(f" Here's your Generate Text :\n   {generated_text}")
+
+    elif choice == "Language Translation":
+        st.subheader("Language Translation")
+        st.write(" Translate English text to French (Demo)")
+
+        raw_text = st.text_area("Enter English Text", "Enter text here...")
+        if raw_text and raw_text != "Enter text here...":
+            translator = pipeline("translation_en_to_fr")
+            result = translator(raw_text, max_length=100)
+            st.write("### Translated Text:")
+            st.success(result[0]['translation_text'])
+
+    elif choice == "Text Similarity":
+        st.subheader("Text Similarity Checker")
+        st.write(" Compare two pieces of text to find how similar they are.")
+
+        sent1 = st.text_area("Text 1", "Enter first sentence here...")
+        sent2 = st.text_area("Text 2", "Enter second sentence here...")
+
+        if sent1.strip() != "" and sent2.strip() != "":
+            model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+            emb1 = model.encode(sent1, convert_to_tensor=True)
+            emb2 = model.encode(sent2, convert_to_tensor=True)
+            similarity = util.pytorch_cos_sim(emb1, emb2)
+            st.write(f"### Similarity Score: {similarity.item():.4f}")
+
 def trim_last(sent):
     if "." not in sent[-1]:
         return ''.join(sent)
